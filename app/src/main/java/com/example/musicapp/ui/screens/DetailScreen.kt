@@ -18,7 +18,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -33,15 +36,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.example.musicapp.data.Album
 import com.example.musicapp.data.RetrofitClient
+import com.example.musicapp.ui.components.AlbumImage
 import com.example.musicapp.ui.components.MiniPlayer
 import com.example.musicapp.ui.components.clickableNoRipple
 import com.example.musicapp.ui.theme.CardWhite
@@ -54,16 +54,20 @@ import com.example.musicapp.ui.theme.TextDark
 import com.example.musicapp.ui.theme.TextMuted
 
 @Composable
-fun DetailScreen(albumId: String, onBack: () -> Unit) {
-    var album by remember { mutableStateOf<Album?>(null) }
-    var loading by remember { mutableStateOf(true) }
+fun DetailScreen(
+    albumId: String,
+    initialAlbum: Album? = null,
+    onBack: () -> Unit
+) {
+    var album by remember { mutableStateOf(initialAlbum) }
+    var loading by remember { mutableStateOf(initialAlbum == null) }
     var error by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(albumId) {
         try {
             album = RetrofitClient.api.getAlbum(albumId)
         } catch (e: Exception) {
-            error = e.message ?: "Error"
+            if (album == null) error = e.message ?: "Error"
         } finally {
             loading = false
         }
@@ -81,20 +85,11 @@ fun DetailScreen(albumId: String, onBack: () -> Unit) {
                 val a = album!!
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 96.dp)
+                    contentPadding = PaddingValues(top = 16.dp, bottom = 110.dp)
                 ) {
-                    item { DetailHeader(a, onBack) }
+                    item { DetailHeaderCard(a, onBack) }
                     item { AboutCard(a.description) }
                     item { ArtistChip(a.artist) }
-                    item {
-                        Text(
-                            "Tracks",
-                            color = TextDark,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(start = 20.dp, top = 16.dp, bottom = 8.dp)
-                        )
-                    }
                     items((1..10).toList()) { idx ->
                         TrackItem(album = a, index = idx)
                     }
@@ -111,20 +106,17 @@ fun DetailScreen(albumId: String, onBack: () -> Unit) {
 }
 
 @Composable
-private fun DetailHeader(album: Album, onBack: () -> Unit) {
-    val context = LocalContext.current
+private fun DetailHeaderCard(album: Album, onBack: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .clip(RoundedCornerShape(24.dp))
             .height(440.dp)
     ) {
-        AsyncImage(
-            model = ImageRequest.Builder(context)
-                .data(album.image)
-                .crossfade(true)
-                .build(),
+        AlbumImage(
+            url = album.image,
             contentDescription = album.title,
-            contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
         )
         Box(
@@ -132,14 +124,16 @@ private fun DetailHeader(album: Album, onBack: () -> Unit) {
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        listOf(PurpleScrim, Color.Transparent, PurpleScrim, PurpleDeep)
+                        0f to Color.Black.copy(alpha = 0.25f),
+                        0.45f to Color.Transparent,
+                        1f to PurpleScrim
                     )
                 )
         )
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             CircleIconButton(onClick = onBack) {
@@ -154,11 +148,16 @@ private fun DetailHeader(album: Album, onBack: () -> Unit) {
                 .align(Alignment.BottomStart)
                 .padding(20.dp)
         ) {
-            Text(album.title, color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
-            Text(album.artist, color = Color.White.copy(alpha = 0.85f), fontSize = 15.sp)
+            Text(
+                album.title,
+                color = Color.White,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(album.artist, color = Color.White.copy(alpha = 0.9f), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             Row(
                 modifier = Modifier.padding(top = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Box(
                     modifier = Modifier
@@ -167,7 +166,7 @@ private fun DetailHeader(album: Album, onBack: () -> Unit) {
                         .background(PurplePrimary),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = Color.White)
+                    Icon(Icons.Filled.Shuffle, contentDescription = "Shuffle", tint = Color.White)
                 }
                 Box(
                     modifier = Modifier
@@ -176,7 +175,7 @@ private fun DetailHeader(album: Album, onBack: () -> Unit) {
                         .background(Color.White),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = PurpleDeep)
+                    Icon(Icons.Filled.Download, contentDescription = "Download", tint = PurpleDeep)
                 }
             }
         }
@@ -187,9 +186,9 @@ private fun DetailHeader(album: Album, onBack: () -> Unit) {
 private fun CircleIconButton(onClick: () -> Unit, content: @Composable () -> Unit) {
     Box(
         modifier = Modifier
-            .size(40.dp)
+            .size(44.dp)
             .clip(CircleShape)
-            .background(Color.Black.copy(alpha = 0.35f))
+            .background(Color.Black.copy(alpha = 0.4f))
             .clickableNoRipple(onClick),
         contentAlignment = Alignment.Center
     ) {
@@ -202,16 +201,16 @@ private fun AboutCard(description: String) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 16.dp)
+            .padding(horizontal = 16.dp, vertical = 16.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(CardWhite)
-            .padding(16.dp)
+            .padding(18.dp)
     ) {
-        Text("About this album", color = TextDark, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Text("About this album", color = TextDark, fontSize = 17.sp, fontWeight = FontWeight.Bold)
         Text(
             description,
             color = TextMuted,
-            fontSize = 13.sp,
+            fontSize = 14.sp,
             modifier = Modifier.padding(top = 8.dp)
         )
     }
@@ -221,39 +220,34 @@ private fun AboutCard(description: String) {
 private fun ArtistChip(artist: String) {
     Row(
         modifier = Modifier
-            .padding(start = 20.dp)
+            .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
             .clip(RoundedCornerShape(50))
-            .background(PurpleLight.copy(alpha = 0.4f))
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            .background(PurpleLight.copy(alpha = 0.35f))
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("Artist: ", color = PurpleDeep, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-        Text(artist, color = TextDark, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        Text("Artist: ", color = PurpleDeep, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        Text(artist, color = TextDark, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
 @Composable
 private fun TrackItem(album: Album, index: Int) {
-    val context = LocalContext.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 6.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .clip(RoundedCornerShape(18.dp))
             .background(CardWhite)
             .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        AsyncImage(
-            model = ImageRequest.Builder(context)
-                .data(album.image)
-                .crossfade(true)
-                .build(),
+        AlbumImage(
+            url = album.image,
             contentDescription = null,
-            contentScale = ContentScale.Crop,
             modifier = Modifier
-                .size(48.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .size(52.dp)
+                .clip(RoundedCornerShape(14.dp))
         )
         Column(
             modifier = Modifier
@@ -263,11 +257,12 @@ private fun TrackItem(album: Album, index: Int) {
             Text(
                 "${album.title} • Track $index",
                 color = TextDark,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp,
                 maxLines = 1
             )
             Text(album.artist, color = TextMuted, fontSize = 12.sp, maxLines = 1)
         }
+        Icon(Icons.Filled.MoreVert, contentDescription = null, tint = TextMuted)
     }
 }

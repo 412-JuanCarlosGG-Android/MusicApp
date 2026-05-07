@@ -5,8 +5,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
 import com.example.musicapp.navigation.AppNavigation
 import com.example.musicapp.ui.theme.MusicAppTheme
@@ -18,11 +18,11 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MusicAppTheme {
-                Scaffold(
+                Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(PurpleBg)
-                ) { _ ->
+                ) {
                     AppNavigation()
                 }
             }
