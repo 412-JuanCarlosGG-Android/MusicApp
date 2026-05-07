@@ -35,11 +35,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.imageLoader
+import coil.request.ImageRequest
+import coil.request.SuccessResult
 import com.example.musicapp.data.Album
 import com.example.musicapp.data.RetrofitClient
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import com.example.musicapp.ui.components.AlbumImage
 import com.example.musicapp.ui.components.MiniPlayer
 import com.example.musicapp.ui.components.clickableNoRipple
@@ -56,10 +63,24 @@ fun HomeScreen(onAlbumClick: (Album) -> Unit) {
     var albums by remember { mutableStateOf<List<Album>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         try {
-            albums = RetrofitClient.api.getAlbums()
+            val fetched = RetrofitClient.api.getAlbums()
+            val loader = context.imageLoader
+            albums = coroutineScope {
+                fetched.map { album ->
+                    async {
+                        val result = loader.execute(
+                            ImageRequest.Builder(context)
+                                .data(album.image)
+                                .build()
+                        )
+                        if (result is SuccessResult) album else null
+                    }
+                }.awaitAll().filterNotNull()
+            }
         } catch (e: Exception) {
             error = e.message ?: "Error"
         } finally {
